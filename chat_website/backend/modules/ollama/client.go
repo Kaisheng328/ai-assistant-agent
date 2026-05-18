@@ -77,26 +77,14 @@ func (c *Client) GetEmbeddings(model string, prompt string) ([]float32, error) {
 func (c *Client) GetLocalModels() ([]models.ModelInfo, error) {
 	var list []models.ModelInfo
 
-	// If online provider is configured, prepend popular free online models to the list
+	// If online provider is configured, prepend NVIDIA NIM models to the list
 	if c.OnlineAPIKey != "" {
 		nowStr := time.Now().Format(time.RFC3339)
-		if strings.Contains(c.OnlineAPIURL, "openrouter.ai") {
-			list = []models.ModelInfo{
-				{Name: "openrouter/auto", Size: 0, ModifiedAt: nowStr},
-				{Name: "meta-llama/llama-3-8b-instruct:free", Size: 0, ModifiedAt: nowStr},
-				{Name: "mistralai/mistral-7b-instruct:free", Size: 0, ModifiedAt: nowStr},
-			}
-		} else if strings.Contains(c.OnlineAPIURL, "groq.com") {
-			list = []models.ModelInfo{
-				{Name: "llama3-8b-8192", Size: 0, ModifiedAt: nowStr},
-				{Name: "gemma2-9b-it", Size: 0, ModifiedAt: nowStr},
-				{Name: "mixtral-8x7b-32768", Size: 0, ModifiedAt: nowStr},
-			}
-		} else {
-			// Generic OpenAI-compatible custom model
-			list = []models.ModelInfo{
-				{Name: "online-custom-model", Size: 0, ModifiedAt: nowStr},
-			}
+		list = []models.ModelInfo{
+			{Name: "nvidia/llama-3.1-nemotron-nano-8b-v1", Size: 0, ModifiedAt: nowStr},
+			{Name: "meta/llama-3.1-8b-instruct", Size: 0, ModifiedAt: nowStr},
+			{Name: "meta/llama-3.2-3b-instruct", Size: 0, ModifiedAt: nowStr},
+			{Name: "google/gemma-3-12b-it", Size: 0, ModifiedAt: nowStr},
 		}
 	}
 
@@ -181,8 +169,8 @@ func (c *Client) PullModel(model string, onProgress func(status string, total, c
 }
 
 func (c *Client) StreamChat(model string, messages []models.ChatMessage, onToken func(token string) error) error {
-	// Check if this model requires online routing (i.e. we have online API set up and the model name matches online signatures)
-	isOnline := c.OnlineAPIKey != "" && (strings.Contains(model, "/") || strings.Contains(model, "-8b") || strings.Contains(model, "-9b") || strings.Contains(model, "mixtral") || model == "online-custom-model")
+	// Check if this model requires online routing (i.e. starts with nvidia/, meta/, google/ etc.)
+	isOnline := c.OnlineAPIKey != "" && strings.Contains(model, "/")
 
 	if isOnline {
 		return c.streamOnlineChat(model, messages, onToken)
@@ -264,11 +252,7 @@ func (c *Client) streamOnlineChat(model string, messages []models.ChatMessage, o
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.OnlineAPIKey))
 
-	// Add OpenRouter specific metadata headers if applicable
-	if strings.Contains(c.OnlineAPIURL, "openrouter.ai") {
-		req.Header.Set("HTTP-Referer", "https://goansuran.com")
-		req.Header.Set("X-Title", "GoAnsuran AI Sales Assistant")
-	}
+
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
