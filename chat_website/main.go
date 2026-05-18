@@ -14,6 +14,7 @@ import (
 	"chat_website/backend/modules/chroma"
 	"chat_website/backend/modules/db"
 	"chat_website/backend/modules/ollama"
+	"chat_website/backend/services"
 )
 
 //go:embed frontend/dist/*
@@ -77,9 +78,13 @@ func main() {
 		log.Println("Warning: ChromaDB is currently unreachable. Make sure ChromaDB container is running.")
 	}
 
-	// 3. Initialize Controllers
-	chatController := controllers.NewChatController(database, olClient, chrClient)
-	knowController := controllers.NewKnowledgeController(database, olClient, chrClient)
+	// 3. Initialize Services
+	chatService := services.NewChatService(database, olClient, chrClient)
+	knowService := services.NewKnowledgeService(database, olClient, chrClient)
+
+	// 4. Initialize Controllers
+	chatController := controllers.NewChatController(chatService)
+	knowController := controllers.NewKnowledgeController(knowService)
 
 	// 4. Setup ServeMux
 	mux := http.NewServeMux()

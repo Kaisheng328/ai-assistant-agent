@@ -9,24 +9,16 @@ import (
 
 	"chat_website/backend/enums"
 	"chat_website/backend/models"
-	"chat_website/backend/modules/chroma"
-	"chat_website/backend/modules/db"
-	"chat_website/backend/modules/ollama"
+	"chat_website/backend/services"
 )
 
 type ChatController struct {
-	DB      *db.DB
-	Ollama  *ollama.Client
-	Chroma  *chroma.Client
-	ColName string
+	Service *services.ChatService
 }
 
-func NewChatController(database *db.DB, ol *ollama.Client, chr *chroma.Client) *ChatController {
+func NewChatController(svc *services.ChatService) *ChatController {
 	return &ChatController{
-		DB:      database,
-		Ollama:  ol,
-		Chroma:  chr,
-		ColName: enums.DefaultCollectionName,
+		Service: svc,
 	}
 }
 
@@ -81,7 +73,7 @@ func (h *ChatController) RouteHandles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChatController) GetConversations(w http.ResponseWriter, r *http.Request) {
-	convs, err := h.DB.GetConversations()
+	convs, err := h.Service.GetConversations()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("database error: %v", err), http.StatusInternalServerError)
 		return
@@ -101,7 +93,7 @@ func (h *ChatController) CreateConversation(w http.ResponseWriter, r *http.Reque
 		body.Title = "New Chat Thread"
 	}
 
-	conv, err := h.DB.CreateConversation(body.Title)
+	conv, err := h.Service.CreateConversation(body.Title)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to create thread: %v", err), http.StatusInternalServerError)
 		return
@@ -112,7 +104,7 @@ func (h *ChatController) CreateConversation(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ChatController) DeleteConversation(w http.ResponseWriter, r *http.Request, convID string) {
-	err := h.DB.DeleteConversation(convID)
+	err := h.Service.DeleteConversation(convID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete thread: %v", err), http.StatusInternalServerError)
 		return
@@ -122,7 +114,7 @@ func (h *ChatController) DeleteConversation(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ChatController) GetMessages(w http.ResponseWriter, r *http.Request, convID string) {
-	msgs, err := h.DB.GetMessages(convID)
+	msgs, err := h.Service.GetMessages(convID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get messages: %v", err), http.StatusInternalServerError)
 		return
@@ -140,68 +132,6 @@ func (h *ChatController) SendMessageStream(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userMsg, err := h.DB.AddMessage(convID, enums.RoleUser, body.Content)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to save message: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	dbHistory, err := h.DB.GetMessages(convID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to fetch thread history: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	sysPrompt, _ := h.DB.GetSetting(enums.SettingSystemPrompt)
-	modelName, _ := h.DB.GetSetting(enums.SettingOllamaModel)
-	embedModelName, _ := h.DB.GetSetting(enums.SettingOllamaEmbeddingModel)
-	ragEnabledStr, _ := h.DB.GetSetting(enums.SettingRagEnabled)
-	ragEnabled := ragEnabledStr == "true"
-
-	var ragContext string
-	if ragEnabled {
-		emb, err := h.Ollama.GetEmbeddings(embedModelName, body.Content)
-		if err != nil {
-			log.Printf("RAG Embedding retrieval failed: %v", err)
-		} else {
-			col, err := h.Chroma.GetOrCreateCollection(h.ColName)
-			if err != nil {
-				log.Printf("Chroma collection retrieve failed: %v", err)
-			} else {
-				res, err := h.Chroma.Query(col.ID, emb, 3)
-				if err != nil {
-					log.Printf("Chroma vector query failed: %v", err)
-				} else if res != nil && len(res.Documents) > 0 && len(res.Documents[0]) > 0 {
-					var contextBuilder strings.Builder
-					contextBuilder.WriteString("\n=== RELEVANT CONTEXT FROM KNOWLEDGE BASE ===\n")
-					for i, doc := range res.Documents[0] {
-						contextBuilder.WriteString(fmt.Sprintf("[%d] %s\n", i+1, doc))
-					}
-					contextBuilder.WriteString("===========================================\n")
-					ragContext = contextBuilder.String()
-				}
-			}
-		}
-	}
-
-	var ollamaMsgs []models.ChatMessage
-
-	fullSysPrompt := sysPrompt
-	if ragContext != "" {
-		fullSysPrompt = sysPrompt + "\nUse the following context to answer the user request. If the context doesn't contain relevant information or is insufficient, use your default training knowledge, but prioritize details in this context where applicable:\n" + ragContext
-	}
-	ollamaMsgs = append(ollamaMsgs, models.ChatMessage{
-		Role:    "system",
-		Content: fullSysPrompt,
-	})
-
-	for _, m := range dbHistory {
-		ollamaMsgs = append(ollamaMsgs, models.ChatMessage{
-			Role:    m.Role,
-			Content: m.Content,
-		})
-	}
-
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -213,27 +143,35 @@ func (h *ChatController) SendMessageStream(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	initMeta, _ := json.Marshal(map[string]interface{}{
-		"user_message": userMsg,
-	})
-	fmt.Fprintf(w, "data: %s\n\n", initMeta)
-	flusher.Flush()
-
-	var responseBuilder strings.Builder
-	streamErr := h.Ollama.StreamChat(modelName, ollamaMsgs, func(token string) error {
-		responseBuilder.WriteString(token)
-
-		payload, _ := json.Marshal(map[string]string{
-			"token": token,
-		})
-
-		_, err := fmt.Fprintf(w, "data: %s\n\n", payload)
-		if err != nil {
-			return err
-		}
-		flusher.Flush()
-		return nil
-	})
+	// Call the service StreamChat
+	aiResponse, streamErr := h.Service.StreamChat(
+		convID,
+		body.Content,
+		func(userMsg *models.Message) error {
+			// Callback when metadata (user message) is ready
+			initMeta, _ := json.Marshal(map[string]interface{}{
+				"user_message": userMsg,
+			})
+			_, err := fmt.Fprintf(w, "data: %s\n\n", initMeta)
+			if err != nil {
+				return err
+			}
+			flusher.Flush()
+			return nil
+		},
+		func(token string) error {
+			// Callback on each stream token chunk
+			payload, _ := json.Marshal(map[string]string{
+				"token": token,
+			})
+			_, err := fmt.Fprintf(w, "data: %s\n\n", payload)
+			if err != nil {
+				return err
+			}
+			flusher.Flush()
+			return nil
+		},
+	)
 
 	if streamErr != nil {
 		log.Printf("Streaming failed: %v", streamErr)
@@ -245,14 +183,21 @@ func (h *ChatController) SendMessageStream(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	aiResponse := responseBuilder.String()
+	// If streaming successfully finishes, send assistant message metadata
 	if strings.TrimSpace(aiResponse) != "" {
-		aiMsg, dbErr := h.DB.AddMessage(convID, enums.RoleAssistant, aiResponse)
-		if dbErr != nil {
-			log.Printf("Error saving assistant message to DB: %v", dbErr)
-		} else {
+		// Fetch assistant's message that was successfully saved in service layer
+		msgs, _ := h.Service.GetMessages(convID)
+		var assistantMsg *models.Message
+		for i := len(msgs) - 1; i >= 0; i-- {
+			if msgs[i].Role == enums.RoleAssistant {
+				assistantMsg = &msgs[i]
+				break
+			}
+		}
+
+		if assistantMsg != nil {
 			finishPayload, _ := json.Marshal(map[string]interface{}{
-				"assistant_message": aiMsg,
+				"assistant_message": assistantMsg,
 				"done":              true,
 			})
 			fmt.Fprintf(w, "data: %s\n\n", finishPayload)
@@ -272,19 +217,13 @@ func (h *ChatController) SettingsHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if r.Method == "GET" {
-		sysPrompt, _ := h.DB.GetSetting(enums.SettingSystemPrompt)
-		modelName, _ := h.DB.GetSetting(enums.SettingOllamaModel)
-		embedModel, _ := h.DB.GetSetting(enums.SettingOllamaEmbeddingModel)
-		ragEnabled, _ := h.DB.GetSetting(enums.SettingRagEnabled)
-
-		res := map[string]string{
-			enums.SettingSystemPrompt:         sysPrompt,
-			enums.SettingOllamaModel:          modelName,
-			enums.SettingOllamaEmbeddingModel: embedModel,
-			enums.SettingRagEnabled:           ragEnabled,
+		settings, err := h.Service.GetSettings()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to get settings: %v", err), http.StatusInternalServerError)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(res)
+		json.NewEncoder(w).Encode(settings)
 		return
 	}
 
@@ -295,13 +234,9 @@ func (h *ChatController) SettingsHandler(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		for k, v := range updates {
-			if k == enums.SettingSystemPrompt || k == enums.SettingOllamaModel || k == enums.SettingOllamaEmbeddingModel || k == enums.SettingRagEnabled {
-				if err := h.DB.SetSetting(k, v); err != nil {
-					http.Error(w, fmt.Sprintf("database write failure: %v", err), http.StatusInternalServerError)
-					return
-				}
-			}
+		if err := h.Service.SetSettings(updates); err != nil {
+			http.Error(w, fmt.Sprintf("failed to save settings: %v", err), http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -322,7 +257,7 @@ func (h *ChatController) GetOllamaModels(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	models, err := h.Ollama.GetLocalModels()
+	models, err := h.Service.GetOllamaModels()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ollama connection error: %v", err), http.StatusInternalServerError)
 		return

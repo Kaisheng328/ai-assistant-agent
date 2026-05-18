@@ -38,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Sparkles size={20} className="text-white animate-pulse" />
           </div>
           <div>
-            <h1 className="logo-text">Local RAG Studio</h1>
+            <h1 className="logo-text">AI RAG Studio</h1>
             <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }}>OLLAMA & CHROMADB</p>
           </div>
         </div>
