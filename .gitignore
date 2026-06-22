@@ -1,55 +1,21 @@
 # ==========================================
-# React Frontend Ignores
+# Frontend (React/Vite)
 # ==========================================
-chat_website/frontend/node_modules/
-chat_website/frontend/dist/
-chat_website/frontend/.env
-chat_website/frontend/.env.local
-chat_website/frontend/.env.development.local
-chat_website/frontend/.env.test.local
-chat_website/frontend/.env.production.local
-chat_website/frontend/npm-debug.log*
-chat_website/frontend/yarn-debug.log*
-chat_website/frontend/yarn-error.log*
-chat_website/frontend/pnpm-debug.log*
+frontend/node_modules
+frontend/dist
 
 # ==========================================
-# Go Backend Ignores
+# Backend (Go/Goyave)
 # ==========================================
-chat_website/main
-chat_website/chat_website
-chat_website/chatbox_server
-chat_website/backend/frontend/dist/
-chat_website/frontend/dist/
-chat_website/go.sum
+go.sum
 
 # ==========================================
-# SQLite & Persistent Data Ignores
+# Environment & Secrets
 # ==========================================
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-chat_website/db/
-data/
-ollama-data/
-chromadb-data/
-
-# ==========================================
-# OS & Editor Ignores
-# ==========================================
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 .env
+!.env.example
+
+# ==========================================
+# OpenCode / Agent Artifacts
+# ==========================================
+.omo/

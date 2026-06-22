@@ -1,0 +1,23 @@
+{
+    "app": {
+        "name": "chatbox-api",
+        "environment": "localhost",
+        "debug": true,
+        "signKey": "changeme"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 3000,
+        "maxUploadSize": 10
+    },
+    "database": {
+        "connection": "postgres",
+        "host": "pgsql",
+        "port": 5432,
+        "name": "chatbox",
+        "username": "chatbox",
+        "password": "chatbox",
+        "options": "sslmode=disable",
+        "autoMigrate": true
+    }
+}

@@ -1,41 +1,75 @@
 services:
-  # 1. The Local AI Engine (Ollama)
+  frontend:
+    image: node:20-alpine
+    container_name: chatboxai-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run build"
+
+  api:
+    image: golang:latest
+    container_name: chatboxai-backend
+    working_dir: /app
+    depends_on:
+      - pgsql
+      - frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - ./frontend/dist:/frontend/dist
+    command: sh -c "go mod tidy && go run main.go"
+    environment:
+      - ONLINE_API_URL=${ONLINE_API_URL:-}
+      - ONLINE_API_KEY=${ONLINE_API_KEY:-}
+      - DB_NAME=${DB_NAME:-chatbox}
+      - DB_USER=${DB_USER:-chatbox}
+      - DB_PASSWORD=${DB_PASSWORD:-chatbox}
+
+  pgsql:
+    image: postgres:17
+    container_name: chatboxai-postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME:-chatbox}
+      - POSTGRES_USER=${DB_USER:-chatbox}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-chatbox}
+
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama
+    container_name: chatboxai-ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
 
-  # 2. The Vector Database (ChromaDB for external AI knowledge)
   chromadb:
     image: chromadb/chroma:latest
-    container_name: chromadb
+    container_name: chatboxai-chromadb
     ports:
-      - "8000:8000"
+      - "8002:8000"
     volumes:
       - chromadb-data:/chroma/chroma
 
-  chat_website:
-    build:
-      context: ./chat_website
-    container_name: chat_website
-    ports:
-      - "3000:3000"
+  adminer:
+    image: adminer
+    container_name: chatboxai-adminer
+    logging:
+      driver: "none"
     depends_on:
-      - ollama
-      - chromadb
-    volumes:
-      - ./chat_website:/app
-      - /app/node_modules
-      - ./data/db:/app/db
+      - pgsql
+    ports:
+      - "8081:8080"
     environment:
-      - ONLINE_API_URL=${ONLINE_API_URL:-}
-      - ONLINE_API_KEY=${ONLINE_API_KEY:-}
+      - ADMINER_DESIGN=lucas-sandery
+      - ADMINER_DEFAULT_SERVER=pgsql
 
 volumes:
-  ollama-data:
+  db-data:
     driver: local
   chromadb-data:
+    driver: local
+  ollama-data:
     driver: local
