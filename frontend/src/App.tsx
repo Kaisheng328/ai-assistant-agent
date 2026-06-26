@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { KnowledgeBase } from './components/KnowledgeBase'
@@ -21,6 +21,7 @@ const App: React.FC = () => {
   // UI state
   const [isGenerating, setIsGenerating] = useState(false)
   const [streamStatus, setStreamStatus] = useState<string>('')
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Settings form states
   const [formSysPrompt, setFormSysPrompt] = useState('')
@@ -146,6 +147,9 @@ const App: React.FC = () => {
     setIsGenerating(true)
     setStreamStatus('')
 
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     // 1. Create client-side temporary user message
     const tempUserMsg: Message = {
       id: 'temp-user-id',
@@ -171,6 +175,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -240,20 +245,60 @@ const App: React.FC = () => {
         }
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === 'temp-ai-id'
+              ? { ...m, content: m.content || 'Generation stopped.' }
+              : m
+          )
+        )
+        return
+      }
+
       console.error('Streaming error: ', err)
-      const errorMsg = err.message || 'Connection lost during inference.'
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === 'temp-ai-id'
-            ? { ...m, content: `Error: Failed to fetch response. ${errorMsg}` }
+            ? { ...m, content: 'Reconnecting...' }
+            : m
+        )
+      )
+
+      for (let i = 0; i < 5; i++) {
+        await new Promise(r => setTimeout(r, 3000))
+        try {
+          const recoverRes = await fetch(`/api/conversations/${activeConvId}/messages`)
+          if (!recoverRes.ok) continue
+          const recovered = await recoverRes.json()
+          const last = recovered[recovered.length - 1]
+          if (last && last.role === 'assistant' && last.content && !last.content.startsWith('Error:')) {
+            setMessages(recovered)
+            return
+          }
+        } catch {}
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === 'temp-ai-id'
+            ? { ...m, content: 'Connection lost. Please reload the page to see the response.' }
             : m
         )
       )
     } finally {
       setIsGenerating(false)
       setStreamStatus('')
+      abortControllerRef.current = null
       fetchConversations()
     }
+  }
+
+  const handleStopGenerating = () => {
+    abortControllerRef.current?.abort()
+    setIsGenerating(false)
+    setStreamStatus('')
   }
 
   // Handle settings update
@@ -313,6 +358,7 @@ const App: React.FC = () => {
           isGenerating={isGenerating}
           streamStatus={streamStatus}
           onSendMessage={handleSendMessage}
+          onStopGenerating={handleStopGenerating}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
           onOpenKnowledge={() => setView('knowledge')}
         />
@@ -350,32 +396,15 @@ const App: React.FC = () => {
 
                 {/* Primary LLM Model */}
                 <div className="form-group">
-                  <label className="form-label">Generation Model (Nvidia API)</label>
-                  {models.length === 0 ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-                      No models returned from API. Make sure the Nvidia API is reachable.
-                      <input 
-                        type="text" 
-                        className="paste-input" 
-                        style={{ marginTop: '0.5rem', width: '100%' }}
-                        value={formModel}
-                        onChange={(e) => setFormModel(e.target.value)}
-                        placeholder="Fallback model name (e.g. meta/llama-3.2-3b-instruct)"
-                      />
-                    </div>
-                  ) : (
-                    <select
-                      className="form-select"
-                      value={formModel}
-                      onChange={(e) => setFormModel(e.target.value)}
-                    >
-                      {models.map((m) => (
-                        <option key={m.name} value={m.name}>
-                          {m.name} {m.size ? `(${(m.size / 1e9).toFixed(2)} GB)` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <label className="form-label">Generation Model (OpenRouter)</label>
+                  <select
+                    className="form-select"
+                    value={formModel}
+                    onChange={(e) => setFormModel(e.target.value)}
+                  >
+                    <option value="google/gemini-3.1-flash-lite">google/gemini-3.1-flash-lite</option>
+                    <option value="deepseek/deepseek-v4-flash">deepseek/deepseek-v4-flash</option>
+                  </select>
                 </div>
 
                 {/* Embedding model */}

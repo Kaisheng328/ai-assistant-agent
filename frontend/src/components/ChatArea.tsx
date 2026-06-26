@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Menu, Sparkles, BookOpen, Check, Copy } from 'lucide-react'
+import { Send, Menu, Sparkles, BookOpen, Check, Copy, Square } from 'lucide-react'
 import { Message, Settings } from '../types'
 
 interface ChatAreaProps {
@@ -10,6 +10,7 @@ interface ChatAreaProps {
   isGenerating: boolean;
   streamStatus: string;
   onSendMessage: (content: string) => void;
+  onStopGenerating: () => void;
   onOpenMobileSidebar: () => void;
   onOpenKnowledge: () => void;
 }
@@ -147,6 +148,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isGenerating,
   streamStatus,
   onSendMessage,
+  onStopGenerating,
   onOpenMobileSidebar,
   onOpenKnowledge,
 }) => {
@@ -321,14 +323,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             onKeyDown={handleKeyDown}
             disabled={!activeConvId || isGenerating}
           />
-          <button
-            className="send-btn"
-            onClick={handleSend}
-            disabled={!input.trim() || !activeConvId || isGenerating}
-            title="Send Message"
-          >
-            <Send size={16} />
-          </button>
+          {isGenerating ? (
+            <button
+              className="send-btn"
+              onClick={onStopGenerating}
+              title="Stop generating"
+              style={{ background: '#ef4444' }}
+            >
+              <Square size={16} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              className="send-btn"
+              onClick={handleSend}
+              disabled={!input.trim() || !activeConvId}
+              title="Send Message"
+            >
+              <Send size={16} />
+            </button>
+          )}
         </div>
       </footer>
     </div>

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,34 +119,51 @@ func SendMessage(response *goyave.Response, request *goyave.Request) {
 		modelName = modelSetting.Value
 	}
 
+	// Max output tokens. Shared between reasoning + answer on reasoning models
+	// (e.g. deepseek-v4-flash thinks before answering). Default 4096 leaves room
+	// for the actual answer even after a reasoning phase. Override via settings
+	// key "max_tokens" if needed.
+	var maxTokensSetting model.Setting
+	database.Conn().Where("key = ?", "max_tokens").First(&maxTokensSetting)
+	maxTokens := 4096
+	if maxTokensSetting.Value != "" {
+		if n, err := strconv.Atoi(maxTokensSetting.Value); err == nil && n > 0 {
+			maxTokens = n
+		}
+	}
+
 	// Fetch history
 	var history []model.Message
 	database.Conn().Where("conversation_id = ?", convID).Order("created_at asc").Find(&history)
 
 	var ragSetting model.Setting
 	database.Conn().Where("key = ?", "rag_enabled").First(&ragSetting)
-	
+
 	if ragSetting.Value == "true" {
 		heartbeat(response)
 		writeSSE(response, map[string]string{"status": "searching"})
 		var embedSetting model.Setting
 		database.Conn().Where("key = ?", "ollama_embedding_model").First(&embedSetting)
 		embedModel := "nomic-embed-text:latest"
-		if embedSetting.Value != "" { embedModel = embedSetting.Value }
-		
+		if embedSetting.Value != "" {
+			embedModel = embedSetting.Value
+		}
+
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"model": embedModel,
+			"model":  embedModel,
 			"prompt": body.Content,
 		})
 		resp, _ := http.Post("http://ollama:11434/api/embeddings", "application/json", bytes.NewBuffer(reqBody))
 		var embRes map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&embRes)
 		resp.Body.Close()
-		
+
 		if emb, ok := embRes["embedding"].([]interface{}); ok {
 			var floatEmb []float64
-			for _, e := range emb { floatEmb = append(floatEmb, e.(float64)) }
-			
+			for _, e := range emb {
+				floatEmb = append(floatEmb, e.(float64))
+			}
+
 			// get collection id
 			getColBody, _ := json.Marshal(map[string]interface{}{"name": "default_collection", "get_or_create": true})
 			colResp, _ := http.Post("http://chromadb:8000/api/v2/tenants/default_tenant/databases/default_database/collections", "application/json", bytes.NewBuffer(getColBody))
@@ -153,72 +171,72 @@ func SendMessage(response *goyave.Response, request *goyave.Request) {
 			json.NewDecoder(colResp.Body).Decode(&colRes)
 			colResp.Body.Close()
 			colId := colRes["id"].(string)
-			
-		queryBody, _ := json.Marshal(map[string]interface{}{
-			"query_embeddings": [][]float64{floatEmb},
-			"n_results":        10,
-			"include":          []string{"documents", "metadatas", "distances"},
-		})
+
+			queryBody, _ := json.Marshal(map[string]interface{}{
+				"query_embeddings": [][]float64{floatEmb},
+				"n_results":        10,
+				"include":          []string{"documents", "metadatas", "distances"},
+			})
 			queryResp, _ := http.Post("http://chromadb:8000/api/v2/tenants/default_tenant/databases/default_database/collections/"+colId+"/query", "application/json", bytes.NewBuffer(queryBody))
 			var queryRes map[string]interface{}
 			json.NewDecoder(queryResp.Body).Decode(&queryRes)
 			queryResp.Body.Close()
-			
-		if docs, ok := queryRes["documents"].([]interface{}); ok && len(docs) > 0 {
-			if chunkArr, ok := docs[0].([]interface{}); ok && len(chunkArr) > 0 {
-				// Extract distances and metadatas for filtering
-				var distances []interface{}
-				if distRaw, ok := queryRes["distances"].([]interface{}); ok && len(distRaw) > 0 {
-					distances, _ = distRaw[0].([]interface{})
-				}
-				var metadatas []interface{}
-				if metaRaw, ok := queryRes["metadatas"].([]interface{}); ok && len(metaRaw) > 0 {
-					metadatas, _ = metaRaw[0].([]interface{})
-				}
 
-				var contextBuilder strings.Builder
-				contextBuilder.WriteString("\n\n=== RELEVANT CONTEXT FROM KNOWLEDGE BASE ===\n")
-
-				relevantCount := 0
-				for i, c := range chunkArr {
-					docText, _ := c.(string)
-
-					// Distance-based relevance filtering (L2 distance with nomic-embed-text 768-dim)
-					// Typical relevant range: 280-450; irrelevant: 500+
-					var distance float64 = 999.0
-					if i < len(distances) {
-						distance, _ = distances[i].(float64)
+			if docs, ok := queryRes["documents"].([]interface{}); ok && len(docs) > 0 {
+				if chunkArr, ok := docs[0].([]interface{}); ok && len(chunkArr) > 0 {
+					// Extract distances and metadatas for filtering
+					var distances []interface{}
+					if distRaw, ok := queryRes["distances"].([]interface{}); ok && len(distRaw) > 0 {
+						distances, _ = distRaw[0].([]interface{})
 					}
-					if distance > 500.0 {
-						continue
+					var metadatas []interface{}
+					if metaRaw, ok := queryRes["metadatas"].([]interface{}); ok && len(metaRaw) > 0 {
+						metadatas, _ = metaRaw[0].([]interface{})
 					}
 
-					// Extract source title
-					sourceTitle := "Unknown"
-					if i < len(metadatas) {
-						if meta, ok := metadatas[i].(map[string]interface{}); ok {
-							if title, ok := meta["title"].(string); ok {
-								sourceTitle = title
+					var contextBuilder strings.Builder
+					contextBuilder.WriteString("\n\n=== RELEVANT CONTEXT FROM KNOWLEDGE BASE ===\n")
+
+					relevantCount := 0
+					for i, c := range chunkArr {
+						docText, _ := c.(string)
+
+						// Distance-based relevance filtering (L2 distance with nomic-embed-text 768-dim)
+						// Typical relevant range: 280-450; irrelevant: 500+
+						var distance float64 = 999.0
+						if i < len(distances) {
+							distance, _ = distances[i].(float64)
+						}
+						if distance > 500.0 {
+							continue
+						}
+
+						// Extract source title
+						sourceTitle := "Unknown"
+						if i < len(metadatas) {
+							if meta, ok := metadatas[i].(map[string]interface{}); ok {
+								if title, ok := meta["title"].(string); ok {
+									sourceTitle = title
+								}
 							}
 						}
+
+						// Calculate relevance percentage (L2 scale: 0=perfect, 500=irrelevant)
+						relevance := int((1.0 - distance/500.0) * 100)
+						if relevance < 0 {
+							relevance = 0
+						}
+
+						relevantCount++
+						contextBuilder.WriteString(fmt.Sprintf("[%d] (Source: %s, Relevance: %d%%)\n%s\n\n", relevantCount, sourceTitle, relevance, docText))
 					}
 
-					// Calculate relevance percentage (L2 scale: 0=perfect, 500=irrelevant)
-					relevance := int((1.0 - distance/500.0) * 100)
-					if relevance < 0 {
-						relevance = 0
+					if relevantCount > 0 {
+						contextBuilder.WriteString("===========================================\n")
+						sysPrompt += contextBuilder.String()
 					}
-
-					relevantCount++
-					contextBuilder.WriteString(fmt.Sprintf("[%d] (Source: %s, Relevance: %d%%)\n%s\n\n", relevantCount, sourceTitle, relevance, docText))
-				}
-
-				if relevantCount > 0 {
-					contextBuilder.WriteString("===========================================\n")
-					sysPrompt += contextBuilder.String()
 				}
 			}
-		}
 		}
 	}
 
@@ -235,13 +253,13 @@ func SendMessage(response *goyave.Response, request *goyave.Request) {
 	apiKey := os.Getenv("ONLINE_API_KEY")
 
 	reqBody, _ := json.Marshal(map[string]interface{}{
-		"model":       modelName,
-		"messages":    reqMsgs,
-		"stream":      true,
-		"max_tokens":  2048,
+		"model":      modelName,
+		"messages":   reqMsgs,
+		"stream":     true,
+		"max_tokens": maxTokens,
 	})
 
-	fmt.Println("SENDING TO NVIDIA:", string(reqBody))
+	fmt.Println("SENDING TO LLM API:", string(reqBody))
 	heartbeat(response)
 	writeSSE(response, map[string]string{"status": "generating"})
 
@@ -288,6 +306,11 @@ func SendMessage(response *goyave.Response, request *goyave.Request) {
 								if content, ok := delta["content"].(string); ok && content != "" {
 									fullContent += content
 									writeSSE(response, map[string]string{"token": content})
+								}
+								// Reasoning models stream "thinking" here; forward as its own event,
+								// NOT accumulated into fullContent (must not pollute the saved answer).
+								if reasoning, ok := delta["reasoning"].(string); ok && reasoning != "" {
+									writeSSE(response, map[string]string{"reasoning": reasoning})
 								}
 							}
 						}

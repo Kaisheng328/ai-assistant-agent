@@ -32,8 +32,12 @@ RESPONDING STYLE:
 - Be direct, friendly, and honest.
 
 CRITICAL HONESTY RULES (NEVER VIOLATE):
-- You CAN quote prices that appear in the Context (Catalog documents with deposit + monthly amounts). Always quote BOTH the deposit AND the monthly installment.
-- NEVER make up prices for models/storage NOT in the Context. If the exact model+storage is not in the Context, say: "For the latest pricing on that model, please visit [goansuran.com](https://goansuran.com/)."
+- When quoting prices, you MUST use the words "deposit" and "monthly installment". NEVER say "the price is RM X" or "the device costs RM X" — there is NO device price. Only TWO numbers exist: the DEPOSIT (upfront payment) and the MONTHLY INSTALLMENT (per month).
+- Example CORRECT phrasing: "The deposit is RM 1,949.00 and the monthly installment is RM 389.22."
+- Example WRONG phrasing: "The price is RM 1,949.00" or "The deposit is also RM 1,949.00" — this implies a device price which does NOT exist.
+- You CAN quote deposit + monthly amounts that appear in the Context (Catalog documents). Always quote BOTH.
+- NEVER quote GoAngkasa, JCL, or BNPL monthly prices. These plans have complex multi-tenure pricing (12 to 180 months) that varies per model. If a user asks for GoAngkasa/JCL/BNPL pricing, direct them to: GoAngkasa → [goansuran.com/go-angkasa](https://goansuran.com/go-angkasa). Do NOT make up or estimate any monthly amounts for these plans.
+- NEVER make up prices for models/storage NOT in the Context. If the exact model+storage is not in the Context, say: "For the latest deposit and monthly installment on that model, please visit [goansuran.com](https://goansuran.com/)."
 - NEVER invent specific model names, series, or product lines that are not explicitly stated in the Context.
 - NEVER pretend to send emails, links, SMS, or process applications. You CANNOT do these things.
 - NEVER collect personal data (email, phone, IC number). If a user provides personal info, say: "Please register directly at [goansuran.com](https://goansuran.com/) to complete your application securely."
@@ -62,16 +66,23 @@ FAQ:
 - If a user asks a detailed question about how GoFlexi works, deposit policy, device condition, documents needed, warranty, or application steps, check the FAQ knowledge documents in Context first.
 - Full FAQ page: https://goansuran.com/faq
 
-PRODUCTS WE SELL (never refuse these - we carry ALL of these):
-- APPLE: iPhones (iPhone 11 through iPhone 17 series), iPads, Apple Watches, MacBooks.
-- ANDROID: Samsung, Xiaomi, Google Pixel, Oppo, Honor, Vivo, OnePlus, Realme, Nothing, and more.
-- ALSO: Smartwatches, accessories, home appliances, cameras, gaming consoles, motorcycles, furniture.
-- Device repair services: Screen, Battery, Backglass replacement on installment.
+PRODUCTS WE SELL (EXACT LIST — DO NOT INVENT):
+- APPLE: iPhone, iPad (A16, Air M4, Pro M5, Mini A17), MacBook (Air M5, Pro M5, Neo), iMac M4, Mac Mini M4, Mac Studio M4 Max, Apple Watch (SE 3, Series 11), iPad Pencil, Magic Keyboard, Studio Display.
+- SAMSUNG: Galaxy phones only. NO Samsung tablets, NO Samsung watches.
+- HONOR: Phones only. NO HONOR watches or tablets.
+- XIAOMI/POCO/REDMI: Phones only.
+- GOOGLE: Pixel phones only.
+- OPPO, VIVO, INFINIX, ONEPLUS, NOTHING, REALME, RED MAGIC, ASUS, TECNO, iQOO: Phones only.
+- REALME also has: Realme Pad 2 Lite (tablet).
+- TECNO also has: TECNO MEGAPAD 11 (tablet).
+- If a user asks for Samsung tablets, Samsung watches, or HONOR watches, say: "Sorry, we don't carry those. We only have Apple Watch for smartwatches and Apple iPad / Realme Pad / TECNO MEGAPAD for tablets."
+- If a user asks for ANY brand NOT in the 15-brand list (Dell, Lenovo, Huawei, Motorola, Nokia, Sony, Acer, HP, etc.), say: "Sorry, we don't carry that brand."
 
-REFUSAL RULE (very specific - only refuse THESE):
-- ONLY refuse if the user asks for a FICTIONAL model that does not exist (e.g., "iPhone 19", "iPhone 99", "Samsung S99").
-- Do NOT refuse when a user asks for "iPhone", "Apple", "Samsung", or any real brand. We sell these!
-- If unsure whether a specific model exists, say "Let me check availability for you at [goansuran.com](https://goansuran.com/)."
+REFUSAL RULE (CRITICAL — READ CAREFULLY):
+- REAL IPHONE MODELS THAT EXIST: iPhone 12, 12 Mini, 12 Pro, 12 Pro Max, iPhone 13, 13 Mini, 13 Pro, 13 Pro Max, iPhone 14, 14 Plus, 14 Pro, 14 Pro Max, iPhone 15, 15 Plus, 15 Pro, 15 Pro Max, iPhone 16, 16 Plus, 16 Pro, 16 Pro Max, 16e, iPhone 17, 17e, 17 Pro, 17 Pro Max, 17 Air. ALL of these are REAL and AVAILABLE. NEVER say any of these don't exist.
+- FICTIONAL models that DON'T exist: iPhone 18, iPhone 19, iPhone 99, or any number above 17. ONLY refuse these.
+- REAL SAMSUNG models: Galaxy S22 through S26, Z Fold 6/7, Z Flip 7, A-series (A07 through A56). All real.
+- Your training data may be outdated. ALWAYS trust the Context over your own knowledge. If a model appears in the Context catalog with pricing, it EXISTS. Do NOT contradict yourself by quoting a price and then later saying the model doesn't exist.
 - You CANNOT write code. If asked for code, refuse in 1 sentence.
 
 ELIGIBILITY HIGHLIGHTS (mention when relevant):
@@ -99,7 +110,7 @@ const KNOWLEDGE_DOCUMENTS = [
   },
   {
     title: "Plan: GoAngkasa (Civil Servant Salary Deduction)",
-    content: `GoAngkasa is an EXCLUSIVE plan for civil servants (government servants with at least 6 months of service). Installments via ANGKASA automatic salary deduction (SPGA — Sistem Potongan Gaji ANGKASA). Secure and hassle-free. Tenures: 12 to 180 months (the longest tenure available, lowest monthly payments). Processing time: approximately 1 week. Deposit: Not required. Includes phone + accessories + warranty package. Apply online at https://goansuran.com/go-angkasa.`
+    content: `GoAngkasa is an EXCLUSIVE plan for civil servants (government servants with at least 6 months of service). Installments via ANGKASA automatic salary deduction (SPGA — Sistem Potongan Gaji ANGKASA). Secure and hassle-free. Tenures: 12 to 180 months (the longest tenure available, lowest monthly payments). Processing time: approximately 1 week. Deposit: Not required (RM 0). Includes phone + accessories + warranty package. PRICING: GoAngkasa has 12 different tenure options per model (12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 144, 180 months). The full price list is too complex for chat. ALWAYS direct users to the GoAngkasa page for pricing: https://goansuran.com/go-angkasa. NEVER quote specific monthly amounts for GoAngkasa.`
   },
   {
     title: "Plan: JCL (Personal Loan)",
@@ -110,29 +121,14 @@ const KNOWLEDGE_DOCUMENTS = [
     content: `BNPL (Buy Now Pay Later) is for instant checkout at walk-in branches using supported BNPL apps: Atome, AhaPay, or Grab. Tenures: 3 to 12 months (short tenures). Processing time: approximately 5 minutes (instant approval). Deposit: May be required. Available for walk-in customers only — not available online.`
   },
   {
-    title: "Catalog: Supported Devices & Brands",
-    content: `We sell a wide range of devices across 17 product categories:
-1. Apple / iPhone: iPhone, iPad, iMac, iWatch, MacBook.
-2. Android Phones: Samsung, HONOR, Xiaomi, Google Pixel, OPPO, Vivo, Infinix, OnePlus, Nothing, Realme, Red Magic, Asus, TECNO, iQOO.
-3. Smartwatches: Casio, G-Shock, Apple, Garmin, Suunto, Samsung.
-4. Accessories.
-5. Motorcycles: Honda, Suzuki, Yamaha, Kawasaki, KTM, SYM, Kymco, BMW, Beneli, Vespa, Ducati, Aprillia, Royal Enfield, Harley Davidson.
-6. Home Appliances: TV, Fans, CCTV, Vacuum, Air Conditioning, Washing Machine.
-7. Cameras: DJI, Sony, Lumix, Canon, Nikon.
-8. Gaming: Nintendo, Sony PlayStation.
-9. IT / Office Equipment.
-10. Furniture.
-11. Lighting.
-12. Fashion / Apparel.
-13. Bags & Leather.
-14. Automotive Parts.
-15. Phone Parts.
-16. Repair Services.
-17. Apple / iPhone (MacBook, iMac included in Apple line).
+    title: "Catalog: Supported Brands",
+    content: `BRANDS WE SELL (COMPLETE LIST): Apple, Samsung, HONOR, Xiaomi, Google, OPPO, Vivo, Infinix, OnePlus, Nothing, Realme, Red Magic, Asus, TECNO, iQOO.
 
-TOP PICKS phone models currently featured: POCO X7 Pro, POCO X7 (RM1,199), POCO F7 Ultra, Xiaomi 15 Ultra, HONOR Magic7 Pro, HONOR X9c, Vivo X200 Pro, OPPO Reno13 Pro 5G, Google Pixel 7a.
+REAL IPHONE MODELS (ALL EXIST — NEVER SAY THEY DON'T): iPhone 12 (12, 12 Mini, 12 Pro, 12 Pro Max), iPhone 13 (13, 13 Mini, 13 Pro, 13 Pro Max), iPhone 14 (14, 14 Plus, 14 Pro, 14 Pro Max), iPhone 15 (15, 15 Plus, 15 Pro, 15 Pro Max), iPhone 16 (16, 16 Plus, 16 Pro, 16 Pro Max, 16e), iPhone 17 (17, 17e, 17 Pro, 17 Pro Max, 17 Air). iPhone 18 and above do NOT exist.
 
-OUT OF SCOPE: We do NOT sell unreleased or fake devices (e.g. iPhone 19).`
+NON-PHONE PRODUCTS: Only Apple has non-phone devices — iPad, MacBook, iMac, Mac Mini, Mac Studio, Apple Watch, iPad Pencil, Magic Keyboard, Studio Display. Realme has Pad 2 Lite. TECNO has MEGAPAD 11. NO other brand has tablets or watches.
+
+BRANDS WE DO NOT SELL: Dell, Lenovo, Huawei, Motorola, Nokia, Sony, Acer, HP, or any brand not listed above.`
   },
   {
     title: "Services: Device Repair",
@@ -151,20 +147,12 @@ OUT OF SCOPE: We do NOT sell unreleased or fake devices (e.g. iPhone 19).`
     content: `GoAnsuran accepts CTOS/CCRIS blacklisted applicants. Marketing claim: "Walau Blacklist 100% Dijamin Lulus" (Even if Blacklisted, 100% Guaranteed Approval). "Tanpa Dokumen" (No Documents required). Open to Government, Private, Self-Employed, and Gig Economy workers (minimum age 18). Very high approval rates even for applicants previously rejected by JCL or Aeon Credit.`
   },
   {
-    title: "Catalog: Apple Devices",
-    content: `Apple products available on installment: iPhone (from iPhone 12 up to iPhone 17 series), iPad (iPad 9, 10, 11, Mini 6, Pro), iMac, iWatch (Apple Watch), and MacBook. All covered under GoAnsuran's 2-year warranty and 90-day free return policy. Eligible for GoFlexi, GoAngkasa, JCL, and BNPL plans.`
+    title: "Catalog: Other Products",
+    content: `In addition to phones, GoAnsuran also offers: iPad tablets (Apple), smartwatches, accessories, and device repair services (screen, battery, backglass replacement on installment). We do NOT sell Dell, Lenovo, or any laptop/computer brand.`
   },
   {
-    title: "Catalog: Home Appliances & Furniture",
-    content: `Home Appliances available: TV, Fans, CCTV, Vacuum, Air Conditioning, Washing Machine. Also offers Furniture, Lighting, and IT / Office Equipment. All available on flexible installment plans with nationwide delivery in 1-2 business days.`
-  },
-  {
-    title: "Catalog: Motorcycles & Automotive",
-    content: `Motorcycle brands available on installment: Honda, Suzuki, Yamaha, Kawasaki, KTM, SYM, Kymco, BMW, Beneli, Vespa, Ducati, Aprillia, Royal Enfield, Harley Davidson. Automotive Parts also available. Eligible for GoAnsuran BNPL plans with high approval rates even for blacklisted applicants.`
-  },
-  {
-    title: "Catalog: Cameras, Gaming & Smartwatches",
-    content: `Camera brands: DJI, Sony, Lumix, Canon, Nikon. Gaming consoles: Nintendo, Sony PlayStation. Smartwatch brands: Casio, G-Shock, Apple, Garmin, Suunto, Samsung. All available on installment with 2-year warranty and free 90-day return.`
+    title: "Catalog: Supplementary Products",
+    content: `GoAnsuran also offers device repair services on installment: Express 30-Minute Screen Repairs, Screen Replacement, Battery Replacement, Back Glass Damage / Backglass Replacement, Charging Port Repair, and Rear Camera Lens repair. Covers both Apple and Android devices from the 15 brands we carry.`
   },
   {
     title: "Application Process & Workflow",
@@ -237,7 +225,7 @@ async function seed() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_prompt: SYSTEM_PROMPT,
-        ollama_model: 'meta/llama-3.3-70b-instruct',
+        ollama_model: 'google/gemini-3.1-flash-lite',
         ollama_embedding_model: 'nomic-embed-text:latest',
         rag_enabled: 'true'
       })
