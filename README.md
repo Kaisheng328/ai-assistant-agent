@@ -374,3 +374,4 @@ curl -s https://integrate.api.nvidia.com/v1/models \
 | Prices not matching | Re-run catalog seeder to fetch latest from GoAnsuran API |
 | AI gives bare URLs (not clickable) | Re-seed: `node seed_goansuran.js` to update system prompt |
 | Empty response in chat | Check API logs: `docker compose logs api --tail 20` |
+# goansuran-chatbot
